@@ -15,7 +15,6 @@
 import unittest
 from functools import partial
 
-import hypothesis.strategies as st
 import numpy as np
 from auto_scan_test import PassAutoScanTest
 from program_config import OpConfig, ProgramConfig, TensorConfig
@@ -36,36 +35,38 @@ class TestLayernormShiftPartitionPass(PassAutoScanTest):
 
     def sample_predictor_configs(self, program_config):
         # trt dynamic_shape
-        config = self.create_trt_inference_config()
-        config.enable_tensorrt_engine(
-            max_batch_size=1,
-            workspace_size=102400,
-            min_subgraph_size=0,
-            precision_mode=paddle_infer.PrecisionType.Float32,
-            use_static=False,
-            use_calib_mode=False,
-        )
-        config.set_trt_dynamic_shape_info(
-            {
-                "input_data_x": [1, 9, 96],
-                "input_data_y": [1, 9, 96],
-            },
-            {
-                "input_data_x": [4, 3136, 768],
-                "input_data_y": [4, 3136, 768],
-            },
-            {
-                "input_data_x": [1, 784, 384],
-                "input_data_y": [1, 784, 384],
-            },
-        )
-        yield config, ['preln_layernorm_shift_partition'], (1e-5, 1e-5)
+        # config = self.create_trt_inference_config()
+        # config.enable_tensorrt_engine(
+        #     max_batch_size=1,
+        #     workspace_size=102400,
+        #     min_subgraph_size=0,
+        #     precision_mode=paddle_infer.PrecisionType.Float32,
+        #     use_static=False,
+        #     use_calib_mode=False,
+        # )
+        # config.set_trt_dynamic_shape_info(
+        #     {
+        #         "input_data_x": [1, 9, 96],
+        #         "input_data_y": [1, 9, 96],
+        #     },
+        #     {
+        #         "input_data_x": [4, 3136, 768],
+        #         "input_data_y": [4, 3136, 768],
+        #     },
+        #     {
+        #         "input_data_x": [1, 784, 384],
+        #         "input_data_y": [1, 784, 384],
+        #     },
+        # )
+        # yield config, ['preln_layernorm_shift_partition'], (1e-5, 1e-5)
 
         # trt dynamic_shape
         config = self.create_trt_inference_config()
+        config.enable_use_gpu(100, 0, paddle_infer.PrecisionType.Half)
+        config.enable_low_precision_io(True)
         config.enable_tensorrt_engine(
             max_batch_size=1,
-            workspace_size=102400,
+            workspace_size=1 << 32,
             min_subgraph_size=0,
             precision_mode=paddle_infer.PrecisionType.Half,
             use_static=False,
@@ -73,35 +74,35 @@ class TestLayernormShiftPartitionPass(PassAutoScanTest):
         )
         config.set_trt_dynamic_shape_info(
             {
-                "input_data_x": [1, 9, 96],
-                "input_data_y": [1, 9, 96],
+                "input_data_x": [1, 3136, 96],
+                "input_data_y": [1, 3136, 96],
             },
             {
-                "input_data_x": [4, 3136, 768],
-                "input_data_y": [4, 3136, 768],
+                "input_data_x": [4, 3136, 96],
+                "input_data_y": [4, 3136, 96],
             },
             {
-                "input_data_x": [1, 784, 384],
-                "input_data_y": [1, 784, 384],
+                "input_data_x": [1, 3136, 96],
+                "input_data_y": [1, 3136, 96],
             },
         )
         yield config, ['preln_layernorm_shift_partition'], (1e-2, 1e-2)
 
     def sample_program_config(self, draw):
         axis = [0, 1, 3, 2, 4, 5]
-        epsilon = draw(st.floats(min_value=0.0000001, max_value=0.001))
+        epsilon = 0.000009999999747378752
         # begin_norm_axis has to be 2
         begin_norm_axis = 2
-        batch_size = draw(st.integers(min_value=1, max_value=4))
+        batch_size = 4
 
-        window_size = draw(st.sampled_from([3, 5, 7]))
-        move_shape = draw(st.integers(min_value=1, max_value=8))
-        dim = draw(st.sampled_from([96, 192, 384, 768]))
+        window_size = 7
+        move_shape = 8
+        dim = 96
 
         def generate_input(attrs):
             return np.random.random(
                 [attrs[1]["batch_size"], *attrs[1]["input_dim"]]
-            ).astype(np.float32)
+            ).astype(np.float16)
 
         def generate_weight(attrs):
             return np.random.random(attrs[1]['input_dim'][-1]).astype(

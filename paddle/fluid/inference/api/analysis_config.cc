@@ -906,7 +906,7 @@ void AnalysisConfig::Update() {
           (pass == "conv_bn_fuse_pass")) {
         continue;
       }
-      pass_builder()->AppendPass(pass);
+      1()->AppendPass(pass);
     }
   }
 

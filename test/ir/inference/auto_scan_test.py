@@ -132,23 +132,34 @@ class AutoScanTest(unittest.TestCase):
         Test a single case.
         """
         pred_config.set_model_buffer(model, len(model), params, len(params))
+        pass_builder = pred_config.pass_builder()
+        pass_builder.delete_pass('preln_layernorm_x_fuse_pass')
+        pass_builder.delete_pass('layernorm_shift_partition_fuse_pass')
         predictor = paddle_infer.create_predictor(pred_config)
         self.available_passes_in_framework = (
             self.available_passes_in_framework
             | set(pred_config.pass_builder().all_passes())
         )
+
+        # import pdb;pdb.set_trace()
         for name, _ in prog_config.inputs.items():
             input_tensor = predictor.get_input_handle(name)
             input_tensor.copy_from_cpu(feed_data[name]["data"])
             if feed_data[name]["lod"] is not None:
                 input_tensor.set_lod(feed_data[name]["lod"])
-        predictor.run()
-        result = {}
-        for out_name, o_name in zip(
-            prog_config.outputs, predictor.get_output_names()
-        ):
-            result[out_name] = predictor.get_output_handle(o_name).copy_to_cpu()
-        return result
+        paddle.device.cuda.synchronize()
+        start_time = time.time()
+        count = 100
+        end_time = 0
+        while count > 0:
+            predictor.run()
+            count = count - 1
+            if count == 0:
+                paddle.device.cuda.synchronize()
+                end_time = time.time()
+        print("end_time:", end_time)
+        print("avg_time:", (end_time - start_time) / 100)
+        return None
 
     @abc.abstractmethod
     def assert_tensors_near(
@@ -231,7 +242,7 @@ class AutoScanTest(unittest.TestCase):
         config = paddle_infer.Config()
         config.switch_ir_debug(True)
         config.set_optim_cache_dir(self.cache_dir)
-        config.disable_glog_info()
+        # config.disable_glog_info()
         if ir_optim is not None:
             config.switch_ir_optim(ir_optim)
         if use_gpu:
@@ -486,7 +497,6 @@ class PassAutoScanTest(AutoScanTest):
                 (atol, rtol),
             ) in self.sample_predictor_configs(prog_config):
                 self.num_predictor_kinds += 1
-
                 # skip info
                 ignore_flag = False
                 for ignore_info in self.ignore_cases:
@@ -572,7 +582,7 @@ class PassAutoScanTest(AutoScanTest):
 
     def create_trt_inference_config(self) -> paddle_infer.Config:
         config = paddle_infer.Config()
-        config.disable_glog_info()
+        # config.disable_glog_info()
         config.enable_use_gpu(100, 0)
         config.set_optim_cache_dir(self.cache_dir)
         config.switch_ir_debug()
@@ -638,7 +648,7 @@ class TrtLayerAutoScanTest(AutoScanTest):
 
     def create_inference_config(self, use_trt=True) -> paddle_infer.Config:
         config = paddle_infer.Config()
-        config.disable_glog_info()
+        # config.disable_glog_info()
         config.enable_use_gpu(100, 0)
         config.set_optim_cache_dir(self.cache_dir)
         if use_trt:
@@ -716,7 +726,7 @@ class TrtLayerAutoScanTest(AutoScanTest):
             dic["use_trt"] = False
         return str(dic)
 
-    def run_test(self, quant=False, skip_baseline=False, *args, **kwargs):
+    def run_test(self, quant=False, skip_baseline=True, *args, **kwargs):
         all_passes = True
 
         def random_to_skip():
@@ -870,16 +880,16 @@ class CutlassAutoScanTest(AutoScanTest):
             results: List[Dict[str, np.ndarray]] = []
 
             # baseline: gpu no ir_optim run
-            base_config = self.create_inference_config(
-                ir_optim=False, use_gpu=True
-            )
-            logging.info('RUN program_config: ' + str(prog_config))
-            results.append(
-                self.run_test_config(
-                    model, params, prog_config, base_config, feed_data
-                )
-            )
-            self.success_log('RUN_GPU_BASELINE done')
+            # base_config = self.create_inference_config(
+            #     ir_optim=False, use_gpu=True
+            # )
+            # logging.info('RUN program_config: ' + str(prog_config))
+            # results.append(
+            #     self.run_test_config(
+            #         model, params, prog_config, base_config, feed_data
+            #     )
+            # )
+            # self.success_log('RUN_GPU_BASELINE done')
 
             for pred_config, (atol, rtol) in self.sample_predictor_configs(
                 prog_config

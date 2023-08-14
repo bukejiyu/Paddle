@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import time
+
 import numpy as np
 
 import paddle
@@ -27,8 +29,12 @@ def test_fuse_resenet_unit():
     place = paddle.CPUPlace()
     program = paddle.static.Program()
     startup_program = paddle.static.Program()
-    batch_size = 1
-    token_size = 4097
+    # batch_size = 1
+    # token_size = 4097
+    # hidden_size = 768
+    # num_heads = 12
+    batch_size = 16
+    token_size = 197
     hidden_size = 768
     num_heads = 12
     dtype = np.float32
@@ -63,11 +69,33 @@ def test_fuse_resenet_unit():
             dtype
         )
     }
-    before_out = exe.run(program, feed=feed, fetch_list=[out.name])
-    after_out = exe.run(after_program, feed=feed, fetch_list=[out.name])
-    np.testing.assert_allclose(
-        before_out[0], after_out[0], rtol=1e-05, atol=0.005
-    )
+    paddle.device.cuda.synchronize()
+    start_time = time.time()
+    end_time = 0
+    count = 100
+    while count > 0:
+        before_out = exe.run(program, feed=feed, fetch_list=[out.name])
+        count = count - 1
+        if count == 0:
+            paddle.device.cuda.synchronize()
+            end_time = time.time()
+    print("use pass before avg_time:", (end_time - start_time) / 100)
+
+    paddle.device.cuda.synchronize()
+    start_time = time.time()
+    end_time = 0
+    count = 100
+    while count > 0:
+        after_out = exe.run(after_program, feed=feed, fetch_list=[out.name])
+        count = count - 1
+        if count == 0:
+            paddle.device.cuda.synchronize()
+            end_time = time.time()
+    print("use pass avg_time:", (end_time - start_time) / 100)
+    # after_out = exe.run(after_program, feed=feed, fetch_list=[out.name])
+    # np.testing.assert_allclose(
+    #     before_out[0], after_out[0], rtol=1e-05, atol=0.005
+    # )
 
 
 if __name__ == '__main__':

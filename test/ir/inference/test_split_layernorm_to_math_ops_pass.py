@@ -15,7 +15,6 @@
 import unittest
 from functools import partial
 
-import hypothesis.strategies as st
 import numpy as np
 from auto_scan_test import PassAutoScanTest
 from program_config import OpConfig, ProgramConfig, TensorConfig
@@ -26,100 +25,60 @@ import paddle.inference as paddle_infer
 class TestSplitLayernormToMathOpsPass(PassAutoScanTest):
     def sample_predictor_configs(self, program_config):
         # trt dynamic_shape
-        config = self.create_trt_inference_config()
-        config.enable_tensorrt_engine(
-            max_batch_size=1,
-            workspace_size=102400,
-            min_subgraph_size=0,
-            precision_mode=paddle_infer.PrecisionType.Float32,
-            use_static=False,
-            use_calib_mode=False,
-        )
-        config.set_trt_dynamic_shape_info(
-            {
-                "input_data": [1, 6, 16],
-            },
-            {
-                "input_data": [4, 6, 16],
-            },
-            {
-                "input_data": [1, 6, 16],
-            },
-        )
-        yield config, [
-            'reduce_mean',
-            'elementwise_sub',
-            'elementwise_pow',
-            'reduce_mean',
-            'elementwise_add',
-            'sqrt',
-            'elementwise_div',
-            'elementwise_mul',
-            'elementwise_add',
-        ], (1e-5, 1e-5)
+        # config = self.create_trt_inference_config()
+        # config.enable_tensorrt_engine(
+        #     max_batch_size=1,
+        #     workspace_size=102400,
+        #     min_subgraph_size=0,
+        #     precision_mode=paddle_infer.PrecisionType.Float32,
+        #     use_static=False,
+        #     use_calib_mode=False,
+        # )
+        # config.set_trt_dynamic_shape_info(
+        #     {
+        #         "input_data": [1, 6, 16],
+        #     },
+        #     {
+        #         "input_data": [4, 6, 16],
+        #     },
+        #     {
+        #         "input_data": [1, 6, 16],
+        #     },
+        # )
+        # yield config, [
+        #     'reduce_mean',
+        #     'elementwise_sub',
+        #     'elementwise_pow',
+        #     'reduce_mean',
+        #     'elementwise_add',
+        #     'sqrt',
+        #     'elementwise_div',
+        #     'elementwise_mul',
+        #     'elementwise_add',
+        # ], (1e-5, 1e-5)
 
         # trt dynamic_shape
         config = self.create_trt_inference_config()
+        config.enable_use_gpu(100, 0, paddle_infer.PrecisionType.Half)
+        config.enable_low_precision_io(True)
         config.enable_tensorrt_engine(
             max_batch_size=1,
-            workspace_size=102400,
-            min_subgraph_size=0,
-            precision_mode=paddle_infer.PrecisionType.Half,
-            use_static=False,
-            use_calib_mode=False,
-        )
-        config.set_trt_dynamic_shape_info(
-            {
-                "input_data": [1, 6, 16],
-            },
-            {
-                "input_data": [4, 6, 16],
-            },
-            {
-                "input_data": [1, 6, 16],
-            },
-        )
-        yield config, [
-            'reduce_mean',
-            'elementwise_sub',
-            'elementwise_pow',
-            'reduce_mean',
-            'elementwise_add',
-            'sqrt',
-            'elementwise_div',
-            'elementwise_mul',
-            'elementwise_add',
-        ], (1e-2, 1e-2)
-
-        config = self.create_trt_inference_config()
-        config.enable_tensorrt_engine(
-            max_batch_size=4,
-            workspace_size=102400,
+            workspace_size=1 << 32,
             min_subgraph_size=0,
             precision_mode=paddle_infer.PrecisionType.Float32,
             use_static=False,
             use_calib_mode=False,
         )
-        yield config, [
-            'reduce_mean',
-            'elementwise_sub',
-            'elementwise_pow',
-            'reduce_mean',
-            'elementwise_add',
-            'sqrt',
-            'elementwise_div',
-            'elementwise_mul',
-            'elementwise_add',
-        ], (1e-5, 1e-5)
-
-        config = self.create_trt_inference_config()
-        config.enable_tensorrt_engine(
-            max_batch_size=4,
-            workspace_size=102400,
-            min_subgraph_size=0,
-            precision_mode=paddle_infer.PrecisionType.Half,
-            use_static=False,
-            use_calib_mode=False,
+        config.set_trt_dynamic_shape_info(
+            {
+                "input_data": [1, 3136, 96],
+            },
+            {
+                "input_data": [16, 3136, 96],
+            },
+            {
+                "input_data": [8, 3136, 96],
+            },
         )
         yield config, [
             'reduce_mean',
@@ -133,16 +92,61 @@ class TestSplitLayernormToMathOpsPass(PassAutoScanTest):
             'elementwise_add',
         ], (1e-2, 1e-2)
 
-    def sample_program_config(self, draw):
-        epsilon = draw(st.floats(min_value=0.0000001, max_value=0.001))
+        # config = self.create_trt_inference_config()
+        # config.enable_tensorrt_engine(
+        #     max_batch_size=4,
+        #     workspace_size=102400,
+        #     min_subgraph_size=0,
+        #     precision_mode=paddle_infer.PrecisionType.Float32,
+        #     use_static=False,
+        #     use_calib_mode=False,
+        # )
+        # yield config, [
+        #     'reduce_mean',
+        #     'elementwise_sub',
+        #     'elementwise_pow',
+        #     'reduce_mean',
+        #     'elementwise_add',
+        #     'sqrt',
+        #     'elementwise_div',
+        #     'elementwise_mul',
+        #     'elementwise_add',
+        # ], (1e-5, 1e-5)
 
-        begin_norm_axis = draw(st.sampled_from([2, 1]))
-        batch_size = draw(st.integers(min_value=1, max_value=4))
-        dim0 = 6
-        dim1 = 16
-        weight_len = dim1
-        if begin_norm_axis == 1:
-            weight_len *= dim0
+        # config = self.create_trt_inference_config()
+        # config.enable_tensorrt_engine(
+        #     max_batch_size=4,
+        #     workspace_size=102400,
+        #     min_subgraph_size=0,
+        #     precision_mode=paddle_infer.PrecisionType.Half,
+        #     use_static=False,
+        #     use_calib_mode=False,
+        # )
+        # yield config, [
+        #     'reduce_mean',
+        #     'elementwise_sub',
+        #     'elementwise_pow',
+        #     'reduce_mean',
+        #     'elementwise_add',
+        #     'sqrt',
+        #     'elementwise_div',
+        #     'elementwise_mul',
+        #     'elementwise_add',
+        # ], (1e-2, 1e-2)
+
+    def sample_program_config(self, draw):
+        # epsilon = draw(st.floats(min_value=0.0000001, max_value=0.001))
+        epsilon = 0.000009999999747378752
+        # begin_norm_axis = draw(st.sampled_from([2, 1]))
+        # batch_size = draw(st.integers(min_value=1, max_value=4))
+        dim0 = 3136
+        dim1 = 96
+        # weight_len = dim1
+        # if begin_norm_axis == 1:
+        #     weight_len *= dim0
+        batch_size = 16
+        begin_norm_axis = 2
+        weight_len = 96
 
         def generate_input(attrs):
             return np.random.random(

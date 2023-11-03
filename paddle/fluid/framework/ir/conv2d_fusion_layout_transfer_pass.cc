@@ -111,7 +111,7 @@ void Conv2dFusionLayoutTransferPass::ApplyImpl(ir::Graph *graph) const {
       static_cast<phi::DataType>(Get<int>("model_precision")) ==
           phi::DataType::FLOAT16 ||
       Get<bool>("enable_gpu_mixed");
-  bool cutlass_enable = Get<bool>("use_cutlass");
+
   if (!is_fp16_precision) return;
 
   PADDLE_ENFORCE_EQ(graph->IsMainGraph(),
@@ -169,7 +169,7 @@ void Conv2dFusionLayoutTransferPass::ApplyImpl(ir::Graph *graph) const {
     if (op_desc->HasAttr("use_cudnn")) {
       use_cudnn = op_desc->GetAttrIfExists<bool>("use_cudnn");
     }
-
+    bool cutlass_enable = Get<bool>("use_cutlass");
     return !use_cudnn && cutlass_enable;
   };
 

@@ -2337,7 +2337,7 @@ void Conv2dFusionInferMeta(const MetaTensor& input,
                            const std::vector<int>& split_channels,
                            MetaTensor* output,
                            std::vector<MetaTensor*> outputs) {
-  // TODO(wilber): mkldnn seems only support nchw.
+  // TODO(liuyuanle): mkldnn seems only support nchw.
   const bool channel_last = (data_format == "NHWC" || data_format == "NDHWC");
   std::vector<int64_t> out_shape = ComputeOutputShape(input,
                                                       filter,
@@ -2350,6 +2350,13 @@ void Conv2dFusionInferMeta(const MetaTensor& input,
                                                       data_format,
                                                       channel_last);
   output->set_dims(DDim(out_shape.data(), out_shape.size()));
+  output->set_dtype(input.dtype());
+  if (data_format == "NHWC") {
+    output->set_layout(phi::DataLayout::NHWC);
+  } else if (data_format == "NDHWC") {
+    output->set_layout(phi::DataLayout::NDHWC);
+  }
+
   output->share_lod(input);
 
   if (split_channels.size()) {
@@ -2394,6 +2401,12 @@ void Conv2dFusionInferMeta(const MetaTensor& input,
       if (outputs[i] != nullptr) {
         outputs[i]->set_dims(output_shapes[i]);
         outputs[i]->set_dtype(input.dtype());
+        if (data_format == "NHWC") {
+          outputs[i]->set_layout(phi::DataLayout::NHWC);
+        } else if (data_format == "NDHWC") {
+          outputs[i]->set_layout(phi::DataLayout::NDHWC);
+        }
+        outputs[i]->share_lod(input);
       }
     }
   }

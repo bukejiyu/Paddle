@@ -32,6 +32,7 @@ namespace phi {
 template <typename T, typename Context>
 void GroupNormGradKernel(const Context& dev_ctx,
                          const DenseTensor& x,
+                         const paddle::optional<DenseTensor>& residual,
                          const paddle::optional<DenseTensor>& scale,
                          const paddle::optional<DenseTensor>& bias,
                          const DenseTensor& y,
@@ -41,6 +42,7 @@ void GroupNormGradKernel(const Context& dev_ctx,
                          float epsilon,
                          int groups,
                          const std::string& data_layout_str,
+                         const std::string& activation,
                          DenseTensor* d_x,
                          DenseTensor* d_scale,
                          DenseTensor* d_bias) {

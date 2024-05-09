@@ -1558,6 +1558,7 @@ void minimum_grad(const Tensor& x,
 
 template <typename T>
 void group_norm_grad(const Tensor& x,
+                     const paddle::optional<Tensor>& residual,
                      const paddle::optional<Tensor>& scale,
                      const paddle::optional<Tensor>& bias,
                      const Tensor& y,
@@ -1567,6 +1568,7 @@ void group_norm_grad(const Tensor& x,
                      float epsilon,
                      int groups,
                      const std::string& data_layout,
+                     const std::string& activation,
                      Tensor* x_grad,
                      Tensor* scale_grad,
                      Tensor* bias_grad) {

@@ -32,9 +32,13 @@ import paddle.nn.functional as F
 from paddle import base
 from paddle.base import core
 
+def naive_residual_add(x, residual):
+    return x + residual
 
-def group_norm_naive(x, scale, bias, epsilon, groups, data_layout):
+def group_norm_naive(x,scale, bias, epsilon, groups, data_layout,residual=None):
     dim = x.ndim
+    if residual is not None:
+        x=x+residual
     if dim == 3:
         if data_layout == "NHWC":
             x = np.transpose(x, (0, 2, 1))  # NLC => NCL
@@ -80,7 +84,6 @@ def group_norm_naive(x, scale, bias, epsilon, groups, data_layout):
         if data_layout == "NHWC":
             output = np.transpose(output, (0, 2, 3, 4, 1))  # NCDHW => NDHWC
         return output, mean.reshape((N, G)), var.reshape((N, G))
-
 
 class TestGroupNormOpError(unittest.TestCase):
     def test_errors(self):

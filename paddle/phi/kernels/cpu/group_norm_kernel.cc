@@ -32,18 +32,20 @@ namespace phi {
 template <typename T, typename Context>
 void GroupNormKernel(const Context& dev_ctx,
                      const DenseTensor& x,
+                     const paddle::optional<DenseTensor>& residual,
                      const paddle::optional<DenseTensor>& scale,
                      const paddle::optional<DenseTensor>& bias,
                      float epsilon,
                      int groups,
                      const std::string& data_layout_str,
+                     const std::string& activation,
                      DenseTensor* y,
+                     DenseTensor* residual_out,
                      DenseTensor* mean,
                      DenseTensor* var) {
   const DataLayout data_layout = common::StringToDataLayout(data_layout_str);
   const auto scale_ptr = scale.get_ptr();
   const auto bias_ptr = bias.get_ptr();
-
   const auto x_dims = x.dims();
   const int C = static_cast<int>(
       data_layout == DataLayout::kNCHW ? x_dims[1] : x_dims[x_dims.size() - 1]);
@@ -62,7 +64,6 @@ void GroupNormKernel(const Context& dev_ctx,
   if (scale_ptr) scale_data = scale_ptr->data<T>();
   const T* bias_data = nullptr;
   if (bias_ptr) bias_data = bias_ptr->data<T>();
-
   int imsize = 1;
   if (data_layout == DataLayout::kNCHW) {
     for (int i = 2; i < x_dims.size(); ++i) {

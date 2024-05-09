@@ -29,14 +29,17 @@ namespace phi {
 template <typename T, typename Context>
 void GroupNormKernel(const Context& dev_ctx,
                      const DenseTensor& x,
+                     const paddle::optional<DenseTensor>& residual,
                      const paddle::optional<DenseTensor>& scale,
                      const paddle::optional<DenseTensor>& bias,
                      float epsilon,
                      int groups,
-                     const std::string& data_layout,
+                     const std::string& data_layout_str,
+                     const std::string& activation,
                      DenseTensor* y,
+                     DenseTensor* residual_out,
                      DenseTensor* mean,
-                     DenseTensor* variance);
+                     DenseTensor* var);
 
 #if defined(PADDLE_WITH_CUDA) || defined(PADDLE_WITH_HIP)
 template <typename T, typename AccT = T>

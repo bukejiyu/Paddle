@@ -23,7 +23,6 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-
 #include "paddle/common/enforce.h"
 #include "paddle/pir/include/core/builder.h"
 #include "paddle/pir/include/core/dll_decl.h"

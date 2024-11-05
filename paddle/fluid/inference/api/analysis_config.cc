@@ -503,6 +503,7 @@ AnalysisConfig::AnalysisConfig(const AnalysisConfig &other) {
   CP_MEMBER(enable_memory_optim_);
   // Openvino related.
   CP_MEMBER(use_openvino_);
+  CP_MEMBER(openvino_inference_precision_);
   // TensorRT related.
   CP_MEMBER(use_tensorrt_);
   CP_MEMBER(tensorrt_workspace_size_);
@@ -736,8 +737,9 @@ void AnalysisConfig::EnableMkldnnInt8(
   Update();
 }
 
-void AnalysisConfig::EnableOpenVINOEngine() {
+void AnalysisConfig::EnableOpenVINOEngine(Precision inference_precision) {
   use_openvino_ = true;
+  openvino_inference_precision_ = inference_precision;
   Update();
 }
 
@@ -1294,7 +1296,6 @@ std::string AnalysisConfig::Summary() {
     os.InsertRow({"model_from_memory", params_file_});
   }
   os.InsetDivider();
-
   // cpu info
   os.InsertRow(
       {"cpu_math_thread", std::to_string(cpu_math_library_num_threads_)});
@@ -1302,6 +1303,8 @@ std::string AnalysisConfig::Summary() {
   os.InsertRow(
       {"mkldnn_cache_capacity", std::to_string(mkldnn_cache_capacity_)});
   os.InsertRow({"use_openvino", use_openvino_ ? "true" : "false"});
+  os.InsertRow({"openvino_inference_precision",
+                inference::Precision2String(openvino_inference_precision_)});
   os.InsetDivider();
 
   // gpu info

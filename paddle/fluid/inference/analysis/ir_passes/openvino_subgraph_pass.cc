@@ -64,12 +64,19 @@ void analysis::OpenVINOSubgraphPass::ApplyImpl(
   std::string model_params_path = Get<std::string>("model_params_path");
   std::string model_opt_cache_dir = Get<std::string>("model_opt_cache_dir");
   int cpu_math_library_num_threads = Get<int>("cpu_math_library_num_threads");
-
+  bool use_static_engine = Get<bool>("use_static_engine");
   openvino::OpenVINOEngine::ConstructionParams params;
   params.model_program_path = model_program_path;
   params.model_params_path = model_params_path;
   params.model_opt_cache_dir = model_opt_cache_dir;
   params.cpu_math_library_num_threads = cpu_math_library_num_threads;
+  auto inference_precision =
+      static_cast<phi::DataType>(Get<int>("inference_precision"));
+  auto precision = "fp32";
+  if (inference_precision == phi::DataType::BFLOAT16) {
+    precision = "bf16";
+  }
+  params.inference_precision = precision;
 
   std::string engine_key{"openvino"};
   openvino::OpenVINOEngine *ov_engine =
@@ -111,9 +118,11 @@ void analysis::OpenVINOSubgraphPass::ApplyImpl(
   framework::OpDesc openvino_desc;
   openvino_desc.SetType("openvino_engine");
   openvino_desc.SetAttr("model_opt_cache_dir", model_opt_cache_dir);
+  openvino_desc.SetAttr("model_program_path", model_program_path);
+  openvino_desc.SetAttr("model_params_path", model_params_path);
   openvino_desc.SetAttr("engine_key", engine_key);
   openvino_desc.SetAttr("inference_num_threads", cpu_math_library_num_threads);
-
+  openvino_desc.SetAttr("inference_precision", precision);
   auto *openvino_node = graph->CreateOpNode(&openvino_desc);
   std::vector<std::string> input_names;
   std::vector<std::string> output_names;

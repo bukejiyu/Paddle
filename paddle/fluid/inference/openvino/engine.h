@@ -37,13 +37,57 @@ limitations under the License. */
 namespace paddle {
 namespace inference {
 namespace openvino {
-
 /*
  * OpenVINO Engine.
  *
  * There are two alternative ways to use it, one is to build from a paddle
  * protobuf model, another way is to manually construct the network.
  */
+
+static inline ov::element::Type PhiType2OVType(phi::DataType type) {
+  static const std::map<phi::DataType, ov::element::Type> type_map{
+      {phi::DataType::BOOL, ov::element::boolean},
+      {phi::DataType::INT16, ov::element::i16},
+      {phi::DataType::INT32, ov::element::i32},
+      {phi::DataType::INT64, ov::element::i64},
+      {phi::DataType::FLOAT16, ov::element::f16},
+      {phi::DataType::FLOAT32, ov::element::f32},
+      {phi::DataType::FLOAT64, ov::element::f64},
+      {phi::DataType::UINT8, ov::element::u8},
+      {phi::DataType::INT8, ov::element::i8},
+      {phi::DataType::BFLOAT16, ov::element::bf16}};
+  auto it = type_map.find(type);
+  PADDLE_ENFORCE_EQ(
+      it != type_map.end(),
+      true,
+      common::errors::InvalidArgument(
+          "phi::DataType[%s] not supported convert to ov::element::Type .",
+          type));
+  return it->second;
+}
+
+static inline phi::DataType OVType2PhiType(ov::element::Type type) {
+  static const std::map<ov::element::Type, phi::DataType> type_map{
+      {ov::element::boolean, phi::DataType::BOOL},
+      {ov::element::i16, phi::DataType::INT16},
+      {ov::element::i32, phi::DataType::INT32},
+      {ov::element::i64, phi::DataType::INT64},
+      {ov::element::f16, phi::DataType::FLOAT16},
+      {ov::element::f32, phi::DataType::FLOAT32},
+      {ov::element::f64, phi::DataType::FLOAT64},
+      {ov::element::u8, phi::DataType::UINT8},
+      {ov::element::i8, phi::DataType::INT8},
+      {ov::element::bf16, phi::DataType::BFLOAT16}};
+  auto it = type_map.find(type);
+  PADDLE_ENFORCE_EQ(
+      it != type_map.end(),
+      true,
+      common::errors::InvalidArgument(
+          "phi::DataType[%s] not supported convert to ov::element::Type .",
+          type));
+  return it->second;
+}
+
 class OpenVINOEngine {
  public:
   /*
@@ -54,6 +98,7 @@ class OpenVINOEngine {
     std::string model_params_path;
     std::string model_opt_cache_dir;
     int cpu_math_library_num_threads;
+    std::string inference_precision;
   };
 
   explicit OpenVINOEngine(const ConstructionParams& params) : params_(params) {}
@@ -61,6 +106,17 @@ class OpenVINOEngine {
   ~OpenVINOEngine() {}
 
   void BuildEngine();
+  void BindingInput(const std::string& input_name,
+                    ov::element::Type ov_type,
+                    const std::vector<size_t> data_shape,
+                    T* data,
+                    int64_t data_num);
+  ov::Model* model() { return model_.get(); }
+  ov::CompiledModel compiled_model() { return complied_model_; }
+  ov::InferRequest infer_request() { return infer_request_; }
+  ov::Shape GetOuputShapeByName(const std::string& name);
+  phi::DataType GetOuputTypeByName(const std::string& name);
+  void CopyOuputDataByName(const std::string& output_name, void* pd_data);
 
  private:
   //
@@ -68,9 +124,12 @@ class OpenVINOEngine {
   //
   ConstructionParams params_;
 
-  // std::unordered_map<std::string /*name*/, nvinfer1::ITensor* /*ITensor*/>
-  //     itensor_map_;
-
+  ov::Core core_;
+  std::shared_ptr<ov::Model> model_;
+  ov::CompiledModel complied_model_;
+  ov::InferRequest infer_request_;
+  TensorName2IndexMap input_map_;
+  TensorName2IndexMap output_map_;
   std::mutex mutex_;
 
  public:

@@ -162,6 +162,7 @@ void IRPassManager::CreatePasses(Argument *argument,
       std::string model_program_path = argument->model_program_path();
       std::string model_params_path = argument->model_params_path();
       std::string optim_cache_dir = argument->optim_cache_dir();
+      auto inference_precision = argument->openvino_inference_precision();
       int cpu_math_library_num_threads =
           argument->cpu_math_library_num_threads();
       if (optim_cache_dir.empty()) {
@@ -182,6 +183,8 @@ void IRPassManager::CreatePasses(Argument *argument,
       pass->Set("model_opt_cache_dir", new std::string(optim_cache_dir));
       pass->Set("cpu_math_library_num_threads",
                 new int(cpu_math_library_num_threads));
+      pass->Set("inference_precision", new int(inference_precision));
+
     } else if (pass_name == "tensorrt_subgraph_pass") {
       pass->Set("workspace_size",
                 new int64_t(argument->tensorrt_workspace_size()));

@@ -623,7 +623,7 @@ struct PD_INFER_DECL AnalysisConfig {
   /// computation graph. In some models such as resnet50, GoogleNet and so on,
   /// it gains significant performance acceleration.
   ///
-  void EnableOpenVINOEngine();
+  void EnableOpenVINOEngine(Precision inference_precision);
 
   ///
   /// \brief A boolean state telling whether the OpenVINO engine is used.
@@ -1236,6 +1236,7 @@ struct PD_INFER_DECL AnalysisConfig {
 
   // OpenVINO related.
   bool use_openvino_{false};
+  Precision openvino_inference_precision_{Precision::kFloat32};
 
   // TensorRT related.
   bool use_tensorrt_{false};
